@@ -1,4 +1,4 @@
-# bigbacter-db
+# bb-utils
 
 A companion to the [BigBacter](https://github.com/nw-page/bigbacter) pipeline for working with a
 BigBacter database. It has three modes:
@@ -20,16 +20,16 @@ Requires Nextflow 25.04 or later. Tested on 25.04.8, 25.10.0 and 26.10.5 (strict
 
 ```bash
 # What is in the database?
-nextflow run main.nf --db s3://bucket/bigbacter_db --mode summary
+nextflow run DOH-JDJ0303/bb-utils -r main --db s3://bucket/bigbacter_db --mode summary
 
 # Preview a removal, then do it
-nextflow run main.nf --db s3://bucket/bigbacter_db --mode remove \
+nextflow run DOH-JDJ0303/bb-utils -r main --db s3://bucket/bigbacter_db --mode remove \
     --taxa Escherichia_coli --cluster 12 --samples SampleA,SampleB --dry_run
-nextflow run main.nf --db s3://bucket/bigbacter_db --mode remove \
+nextflow run DOH-JDJ0303/bb-utils -r main --db s3://bucket/bigbacter_db --mode remove \
     --taxa Escherichia_coli --cluster 12 --samples SampleA,SampleB
 
 # Push a finished BigBacter run
-nextflow run main.nf --db s3://bucket/bigbacter_db --mode push \
+nextflow run DOH-JDJ0303/bb-utils -r main --db s3://bucket/bigbacter_db --mode push \
     --run s3://bucket/bigbacter_results/1794182400
 ```
 
@@ -37,7 +37,7 @@ nextflow run main.nf --db s3://bucket/bigbacter_db --mode push \
 changing anything. Either way, a manifest of every affected file is written before any file is
 deleted or copied.
 
-Each invocation writes to `<outdir>/<unix time>-<mode>/` (default `bigbacter_db_results/`).
+Each invocation writes to `<outdir>/<unix time>-<mode>/` (default `bb_utils_results/`).
 
 ## Taxa names
 
@@ -49,7 +49,7 @@ different taxon.
 ## summary
 
 ```bash
-nextflow run main.nf --db <db> --mode summary [--taxa a,b] [--cluster 1,2]
+nextflow run DOH-JDJ0303/bb-utils -r main --db <db> --mode summary [--taxa a,b] [--cluster 1,2]
 ```
 
 | File | Contents |
@@ -117,7 +117,7 @@ Output: `remove_manifest.tsv`, one row per file with its size, last-modified tim
 ## push
 
 ```bash
-nextflow run main.nf --db <db> --mode push --run <outdir>/<timestamp> [--taxa a,b]
+nextflow run DOH-JDJ0303/bb-utils -r main --db <db> --mode push --run <outdir>/<timestamp> [--taxa a,b]
 ```
 
 `--run` is one BigBacter run directory. Files are mapped like this:
@@ -129,7 +129,7 @@ nextflow run main.nf --db <db> --mode push --run <outdir>/<timestamp> [--taxa a,
 | `<taxa>/<cluster>/asm/ref.fa.gz` | `<taxa>/clusters/<cluster>/asm/ref.fa.gz` |
 | `<taxa>/<cluster>/aux/ref.json.gz` | `<taxa>/clusters/<cluster>/aux/ref.json.gz` |
 | `<taxa>/<cluster>/var/<sample>.tar.gz` | `<taxa>/clusters/<cluster>/var/<sample>.tar.gz` |
-| `<sample>/asm/<sample>.fa.gz` | `<taxa>/clusters/<cluster>/asm/<sample>.fa.gz` |
+| `<taxa>/<cluster>/asm/<sample>.fa.gz` | `<taxa>/clusters/<cluster>/asm/<sample>.fa.gz` |
 
 The samples to push are the variant tarballs in the run. BigBacter publishes a tarball only for
 samples analysed in that run, so each tarball's path gives the sample, cluster and taxon and no
@@ -156,9 +156,10 @@ non-zero if any copy fails or if any taxon, cluster or sample was skipped for a 
 skipped items are not missed in automated use. Pushing the same run twice copies nothing the
 second time.
 
-## Changes BigBacter needs for push
+## BigBacter version needed for push
 
-As of BigBacter v2.2.0 the run directory holds the variant tarballs and, for a new taxon,
+Push needs a BigBacter version that saves its database files to the run directory. BigBacter
+v2.2.0 does not: its run directory only holds the variant tarballs and, for a new taxon,
 `config.json`. Push also needs:
 
 | File | Publish to | Note |
@@ -166,7 +167,7 @@ As of BigBacter v2.2.0 the run directory holds the variant tarballs and, for a n
 | Signatures (`FLOC` `sigs/*.sig.gz`) | `<timestamp>/<taxa>/sig/` | Floc outputs every signature in the taxon; this tool only pushes those with a variant tarball in the run. |
 | Reference (`ref.fa.gz`) | `<timestamp>/<taxa>/<cluster>/asm/` | Best published for every cluster in the run, not only new ones, so push can confirm the run and database used the same reference. |
 | Reference metadata (`ref.json.gz` or `ref.json`) | `<timestamp>/<taxa>/<cluster>/aux/` | Either name is accepted and copied as is. |
-| Sample assembly (`STD_ASSEMBLY` output) | `<timestamp>/<sample>/asm/<sample>.fa.gz` | Today `SHOVILL` and `NCBI_DATASETS` publish an uncompressed `<sample>.fa` here and assemblies given in the samplesheet are not published at all. The database copy is the gzipped `STD_ASSEMBLY` output. |
+| Sample assembly (`STD_ASSEMBLY` output) | `<timestamp>/<taxa>/<cluster>/asm/<sample>.fa.gz` | The gzipped copy that goes into the database. It replaces the uncompressed `<sample>/asm/<sample>.fa` that `SHOVILL` and `NCBI_DATASETS` publish today. |
 
 Optional: publishing `config.json` to `<timestamp>/<taxa>/` on every run, not only the run that
 creates the taxon, would let push check `clust_dist` for existing taxa too.
@@ -194,7 +195,7 @@ creates the taxon, would let push check `clust_dist` for existing taxa too.
 |---|---|---|---|
 | `--db` | | all | BigBacter database |
 | `--mode` | | all | `summary`, `remove` or `push` |
-| `--outdir` | `bigbacter_db_results` | all | Reports and manifests |
+| `--outdir` | `bb_utils_results` | all | Reports and manifests |
 | `--threads` | `16` | all | Parallel list, copy and delete operations |
 | `--dry_run` | `false` | remove, push | Report only, change nothing |
 | `--taxa` | | all | remove: one taxon (required). summary, push: optional, comma-separated |

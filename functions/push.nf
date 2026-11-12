@@ -10,14 +10,14 @@
     <taxa>/<cluster>/asm/ref.fa.gz                  <taxa>/clusters/<cluster>/asm/ref.fa.gz
     <taxa>/<cluster>/aux/ref.json.gz                <taxa>/clusters/<cluster>/aux/ref.json.gz
     <taxa>/<cluster>/var/<sample>.tar.gz            <taxa>/clusters/<cluster>/var/<sample>.tar.gz
-    <sample>/asm/<sample>.fa.gz                     <taxa>/clusters/<cluster>/asm/<sample>.fa.gz
+    <taxa>/<cluster>/asm/<sample>.fa.gz             <taxa>/clusters/<cluster>/asm/<sample>.fa.gz
 
     The samples to push are the variant tarballs found in the run: BigBacter only publishes a
     tarball for samples analysed in that run, so no summary file is needed to find them.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { cleanTaxa; asList; fmtSize; fileInfoOrNull; listDir; runParallel; readJson; sameNumber; writeTsv; textTable } from './utils'
+include { cleanTaxa; asList; fmtSize; listDir; runParallel; readJson; sameNumber; writeTsv; textTable } from './utils'
 include { scanTaxon; sampleFromName                                                                                  } from './db'
 
 // Directories directly inside a run directory that are not taxa
@@ -26,7 +26,7 @@ def sampleDirNames() {
 }
 
 // Read the database files that one run holds for one taxon.
-def scanRunTaxon(runDir, taxaInfo, threads) {
+def scanRunTaxon(taxaInfo, threads) {
     def entries = listDir(taxaInfo.path)
     def sigs = [:]
     listDir(taxaInfo.path.resolve('sig')).findAll { info -> !info.dir }.each { info ->
@@ -47,29 +47,29 @@ def scanRunTaxon(runDir, taxaInfo, threads) {
         }
         def asm = listDir(info.path.resolve('asm'))
         def aux = listDir(info.path.resolve('aux'))
+        // Sample assemblies sit next to the reference: <taxa>/<cluster>/asm/<sample>.fa.gz
+        def sampleAsm = [:]
+        asm.findAll { f -> !f.dir && f.name != 'ref.fa.gz' }.each { f ->
+            def sample = sampleFromName(f.name, '.fa.gz')
+            if (sample) {
+                sampleAsm[sample] = f
+            }
+        }
         return [
             name   : info.name,
             var    : var,
+            asm    : sampleAsm,
             ref    : asm.find { f -> f.name == 'ref.fa.gz' },
             refMeta: aux.find { f -> f.name == 'ref.json.gz' } ?: aux.find { f -> f.name == 'ref.json' },
         ]
     }
     def clusters = scanned.findAll { c -> c.var }
 
-    // Sample assemblies live in the per-sample folders of the run
-    def sampleNames = clusters.collectMany { c -> c.var.keySet().toList() }.unique()
-    def asmInfos = runParallel(sampleNames, threads) { sample ->
-        fileInfoOrNull(runDir.resolve(sample).resolve('asm').resolve("${sample}.fa.gz".toString()))
-    }
-    def asm = [:]
-    sampleNames.eachWithIndex { sample, i -> asm[sample] = asmInfos[i] }
-
     return [
         taxa      : taxaInfo.name,
         configFile: entries.find { info -> info.name == 'config.json' && !info.dir },
         sigs      : sigs,
         clusters  : clusters,
-        asm       : asm,
     ]
 }
 
@@ -110,7 +110,7 @@ def runPush(opts) {
         top = top.findAll { info -> info.name in wanted }
     }
     else {
-        // Skip the per-sample folders (they only hold asm/, taxa/ and reads/)
+        // Skip the per-sample folders (they only hold taxa/ and reads/, and asm/ in runs before this layout)
         def kinds = runParallel(top, opts.threads) { info ->
             def children = listDir(info.path).collect { c -> c.name }
             return children && !sampleDirNames().containsAll(children)
@@ -142,7 +142,7 @@ def runPush(opts) {
 
     top.each { taxaInfo ->
         def taxa = taxaInfo.name
-        def run = scanRunTaxon(runDir, taxaInfo, opts.threads)
+        def run = scanRunTaxon(taxaInfo, opts.threads)
         if (!run.clusters) {
             return
         }
@@ -238,7 +238,7 @@ def runPush(opts) {
             //  Samples
             // -------------------------------------------------------------------------
             c.var.each { sample, varInfo ->
-                def asmInfo = run.asm[sample]
+                def asmInfo = c.asm[sample]
                 def sigInfo = run.sigs[sample]
                 def elsewhere = (dbScan.clustersBySample[sample] ?: []).findAll { name -> name != c.name }
                 def sampleError = null
@@ -246,7 +246,7 @@ def runPush(opts) {
                     sampleError = "already in the database under cluster ${elsewhere.join(', ')}"
                 }
                 else if (!asmInfo) {
-                    sampleError = "assembly not found in the run (${sample}/asm/${sample}.fa.gz)"
+                    sampleError = "assembly not found in the run (${taxa}/${c.name}/asm/${sample}.fa.gz)"
                 }
                 else if (!sigInfo && !opts.allow_missing_sig) {
                     sampleError = "signature not found in the run (${taxa}/sig/${sample}.sig.gz). Use --allow_missing_sig for samples whose cluster was set in the samplesheet"

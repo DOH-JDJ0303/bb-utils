@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "bigbacter-db parameters",
+  "title": "bb-utils parameters",
   "description": "Summarise, prune and update a BigBacter database",
   "type": "object",
   "$defs": {
@@ -35,7 +35,7 @@
         "outdir": {
           "type": "string",
           "description": "Where reports and manifests are written.",
-          "default": "bigbacter_db_results",
+          "default": "bb_utils_results",
           "format": "directory-path"
         },
         "dry_run": {

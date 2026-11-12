@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds a small synthetic BigBacter database and run directory for testing bigbacter-db.
+# Builds a small synthetic BigBacter database and run directory for testing bb-utils.
 # Usage: tests/make_test_data.sh <target_dir>
 set -euo pipefail
 
@@ -71,7 +71,7 @@ NOW="2026-11-09T12:00:00Z"
 
 # rsample <taxa> <cluster> <sample> [nosig] : files BigBacter publishes for a sample it analysed
 rsample() {
-    mk "$run/$3/asm/$3.fa.gz"        "$NOW" ">$3 ACGTACGTACGT"
+    mk "$run/$1/$2/asm/$3.fa.gz"     "$NOW" ">$3 ACGTACGTACGT"
     mk "$run/$1/$2/var/$3.tar.gz"    "$NOW" "snippy $3"
     mkdir -p "$run/$3/taxa" && echo "predicted.name" > "$run/$3/taxa/$3_gambit.csv"
     if [ "${4:-}" != "nosig" ]; then

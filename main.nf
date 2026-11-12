@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    bigbacter-db
+    bb-utils
     Companion tool for the BigBacter pipeline: summarise a BigBacter database, remove
     samples from it, or push the files of a BigBacter run into it.
 
@@ -17,17 +17,17 @@ include { runPush    } from './functions/push'
 
 def helpMessage() {
     return '''
-    bigbacter-db: manage a BigBacter database
+    bb-utils: manage a BigBacter database
 
     Usage:
-      nextflow run main.nf --db <database> --mode <summary|remove|push> [options]
+      nextflow run DOH-JDJ0303/bb-utils -r main --db <database> --mode <summary|remove|push> [options]
 
     Required:
       --db <path>              BigBacter database (local path, s3://, gs:// or az://)
       --mode <mode>            summary, remove or push
 
     General:
-      --outdir <path>          Where reports and manifests are written   [bigbacter_db_results]
+      --outdir <path>          Where reports and manifests are written   [bb_utils_results]
       --dry_run                remove/push: report what would happen and change nothing
       --threads <n>            Parallel list/copy/delete operations      [16]
 

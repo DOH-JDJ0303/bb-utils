@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-end tests for bigbacter-db against a synthetic local database.
+# End-to-end tests for bb-utils against a synthetic local database.
 # Usage: tests/run_tests.sh [nextflow_binary]
 set -uo pipefail
 
@@ -17,7 +17,7 @@ check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 
 reset() { "$here/make_test_data.sh" "$work/data" > /dev/null; }
 run()   { "$nxf" run "$here/../main.nf" --db data/db "$@" > last.log 2>&1; echo $?; }
-latest() { ls -d bigbacter_db_results/*-"$1" | sort | tail -1; }
+latest() { ls -d bb_utils_results/*-"$1" | sort | tail -1; }
 has()   { [ -e "data/db/$1" ]; }
 hasnt() { [ ! -e "data/db/$1" ]; }
 state() { find data/db -type f | sort | xargs md5sum | md5sum; }
