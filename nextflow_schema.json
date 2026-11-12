@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "bigbacter-db parameters",
+  "description": "Summarise, prune and update a BigBacter database",
+  "type": "object",
+  "$defs": {
+    "required_options": {
+      "title": "Required",
+      "type": "object",
+      "required": [
+        "db",
+        "mode"
+      ],
+      "properties": {
+        "db": {
+          "type": "string",
+          "description": "BigBacter database (local path, s3://, gs:// or az://).",
+          "format": "directory-path"
+        },
+        "mode": {
+          "type": "string",
+          "description": "What to do.",
+          "enum": [
+            "summary",
+            "remove",
+            "push"
+          ]
+        }
+      }
+    },
+    "general_options": {
+      "title": "General",
+      "type": "object",
+      "properties": {
+        "outdir": {
+          "type": "string",
+          "description": "Where reports and manifests are written.",
+          "default": "bigbacter_db_results",
+          "format": "directory-path"
+        },
+        "dry_run": {
+          "type": "boolean",
+          "description": "remove/push: report what would happen and change nothing.",
+          "default": false
+        },
+        "threads": {
+          "type": "integer",
+          "description": "Parallel list, copy and delete operations.",
+          "default": 16,
+          "minimum": 1
+        },
+        "help": {
+          "type": "boolean",
+          "description": "Show the help message.",
+          "default": false,
+          "hidden": true
+        }
+      }
+    },
+    "selection_options": {
+      "title": "Selection",
+      "type": "object",
+      "properties": {
+        "taxa": {
+          "type": "string",
+          "description": "Taxon. remove: exactly one (required). summary/push: optional, comma-separated. Cleaned the same way as BigBacter (non-alphanumeric characters become '_')."
+        },
+        "cluster": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "Cluster. remove: one cluster; on its own it removes the whole cluster. summary: optional, comma-separated."
+        }
+      }
+    },
+    "remove_options": {
+      "title": "Remove",
+      "type": "object",
+      "properties": {
+        "samples": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "Comma-separated sample names, or a file with one name per line. Needs --cluster."
+        },
+        "added_after": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "Remove samples added at or after this time (Unix seconds, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS; UTC)."
+        },
+        "added_before": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "Remove samples added before this time (Unix seconds, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS; UTC)."
+        },
+        "all": {
+          "type": "boolean",
+          "description": "Remove the whole taxon.",
+          "default": false
+        },
+        "prune_empty": {
+          "type": "boolean",
+          "description": "Delete clusters that are left with no samples, including their reference.",
+          "default": true
+        }
+      }
+    },
+    "push_options": {
+      "title": "Push",
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "string",
+          "description": "One BigBacter run directory: <outdir>/<timestamp>.",
+          "format": "directory-path"
+        },
+        "overwrite": {
+          "type": "boolean",
+          "description": "Replace sample files that are already in the database. References and config.json are never replaced.",
+          "default": false
+        },
+        "allow_missing_sig": {
+          "type": "boolean",
+          "description": "Push samples that have no signature in the run (clusters set in the samplesheet).",
+          "default": false
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/required_options"
+    },
+    {
+      "$ref": "#/$defs/general_options"
+    },
+    {
+      "$ref": "#/$defs/selection_options"
+    },
+    {
+      "$ref": "#/$defs/remove_options"
+    },
+    {
+      "$ref": "#/$defs/push_options"
+    }
+  ]
+}
