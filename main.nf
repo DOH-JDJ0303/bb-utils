@@ -17,7 +17,7 @@ include { runPush    } from './functions/push'
 
 def helpMessage() {
     return '''
-    bb-utils: manage a BigBacter database
+    bb-utils: BigBacter utilities workflow
 
     Usage:
       nextflow run DOH-JDJ0303/bb-utils -r main --db <database> --mode <summary|remove|push> [options]
